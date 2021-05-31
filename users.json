@@ -1,0 +1,26 @@
+[
+  {
+    "Id": "1",
+    "Fname": "Frederic",
+    "Lname": "REY",
+    "Email": "frederic.rey.pro@gmail.com"
+  },
+  {
+    "Id": "2",
+    "Fname": "Heitiare",
+    "Lname": "MARAETEFAU",
+    "Email": "kassidollsy04@gmail.com"
+  },
+  {
+    "Id": "3",
+    "Fname": "John",
+    "Lname": "DOE",
+    "Email": "john.doe@random-domain-here.com"
+  },
+  {
+    "Id": "4",
+    "Fname": "Jane",
+    "Lname": "DOE",
+    "Email": "jane.doe@random-domain-here.com"
+  }
+]
