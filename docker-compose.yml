@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  postgres_db_container:
+    image: "postgres:latest"
+    container_name: postgres-1
+    restart: always
+    environment:
+      - POSTGRES_DB=fiber1
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=Password1!
+    ports:
+      - "5432:5432"
+  adminer_container:
+    image: "adminer:latest"
+    container_name: postgres-1-adminer
+    restart: always
+    ports:
+      - 8080:8080

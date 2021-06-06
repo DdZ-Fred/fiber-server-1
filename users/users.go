@@ -3,10 +3,13 @@ package users
 import (
 	"encoding/json"
 	"io/ioutil"
+	"time"
 
 	"github.com/DdZ-Fred/fiber-server-1/models"
+	"github.com/DdZ-Fred/fiber-server-1/password"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 func GetUsersSlice() []models.User {
@@ -16,7 +19,7 @@ func GetUsersSlice() []models.User {
 	return usersSlice
 }
 
-func UsersRouter(app *fiber.App) {
+func UsersRouter(app *fiber.App, db *gorm.DB) {
 	users := app.Group("/users")
 
 	users.Get("/:id", func(c *fiber.Ctx) error {
@@ -37,22 +40,45 @@ func UsersRouter(app *fiber.App) {
 		return c.JSON(usersSlice)
 	})
 
+	// POST v2: user added to DB
 	users.Post("/", func(c *fiber.Ctx) error {
-		user, _ := GetParsedBody(c)
+		var payload PostPayload
 
-		user.Id = uuid.New().String()
-
-		usersSlice := GetUsersSlice()
-		usersSlice = append(usersSlice, user)
-
-		usersSliceBytes, _ := json.Marshal(usersSlice)
-
-		err := ioutil.WriteFile("users.json", usersSliceBytes, 0600)
-
-		if err != nil {
-			return err
+		if err := c.BodyParser(&payload); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": err.Error(),
+			})
 		}
-		return c.Status(201).JSON(user)
+
+		validationErrors := PostValidate(payload)
+		if validationErrors != nil {
+			return c.JSON(validationErrors)
+		}
+
+		birthDate, _ := time.Parse(time.RFC3339, payload.BirthDate)
+		password, _ := password.EncryptPassword(payload.Password, &password.Params{
+			Memory:      64 * 1024,
+			Iterations:  3,
+			Parallelism: 2,
+			SaltLength:  16,
+			KeyLength:   32,
+		})
+
+		newUser := models.User{
+			Id:        uuid.New().String(),
+			Fname:     payload.Fname,
+			Lname:     payload.Lname,
+			Email:     payload.Email,
+			BirthDate: birthDate,
+			Password:  password,
+		}
+
+		result := db.Create(&newUser)
+		if result.Error != nil {
+			return result.Error
+		}
+
+		return c.Status(201).JSON(newUser)
 	})
 
 	users.Put("/:id", func(c *fiber.Ctx) error {
