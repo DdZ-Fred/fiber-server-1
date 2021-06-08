@@ -9,6 +9,7 @@ import (
 	"github.com/DdZ-Fred/fiber-server-1/password"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"github.com/jackc/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -73,9 +74,20 @@ func UsersRouter(app *fiber.App, db *gorm.DB) {
 			Password:  password,
 		}
 
-		result := db.Create(&newUser)
-		if result.Error != nil {
-			return result.Error
+		if err := db.Create(&newUser).Error; err != nil {
+			// Read about error value: https://blog.golang.org/go1.13-errors#TOC_2.1.
+			if pgErr, ok := err.(*pgconn.PgError); ok {
+				switch pgErr.Code {
+				case "23505":
+					return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+						"originalError": pgErr,
+						"code":          1001,
+						"status":        "email_already_taken",
+					})
+				}
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(err)
+			// return err
 		}
 
 		return c.Status(201).JSON(newUser)
