@@ -53,8 +53,8 @@ func PostValidate(payload PostPayload) []*validation.ValidationError {
 		for _, err := range err.(validator.ValidationErrors) {
 			var element validation.ValidationError
 			element.FailedField = err.StructNamespace()
-			element.Tag = err.Tag()
-			element.Value = err.Param()
+			element.ValidatorKey = err.Tag()
+			element.ValidatorParam = err.Param()
 			errors = append(errors, &element)
 		}
 	}

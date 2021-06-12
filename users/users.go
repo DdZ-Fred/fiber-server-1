@@ -5,8 +5,10 @@ import (
 	"io/ioutil"
 	"time"
 
+	"github.com/DdZ-Fred/fiber-server-1/dbUtils"
 	"github.com/DdZ-Fred/fiber-server-1/models"
 	"github.com/DdZ-Fred/fiber-server-1/password"
+	"github.com/DdZ-Fred/fiber-server-1/validation"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/jackc/pgconn"
@@ -36,9 +38,39 @@ func UsersRouter(app *fiber.App, db *gorm.DB) {
 		return c.JSON(user)
 	})
 
+	// [JSON] GET ALL
+	// users.Get("/", func(c *fiber.Ctx) error {
+	// 	usersSlice := GetUsersSlice()
+	// 	return c.JSON(usersSlice)
+	// })
+
+	// [DB] GET ALL
 	users.Get("/", func(c *fiber.Ctx) error {
-		usersSlice := GetUsersSlice()
-		return c.JSON(usersSlice)
+		var users []models.UserSafe
+
+		pagination := dbUtils.GeneratePaginationFromRequest(c)
+		offset := (pagination.Page - 1) * pagination.PerPage
+		var totalRows int64 = 1
+
+		db.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Model(&models.User{}).Limit(pagination.PerPage).Offset(offset).Find(&users).Error; err != nil {
+				// Returning any error rollbacks the transaction
+				return err
+			}
+			if err := tx.Model(&models.User{}).Count(&totalRows).Error; err != nil {
+				return err
+			}
+
+			// Returning nil commits the whole transaction
+			return nil
+		})
+
+		dbUtils.SetPaginationTotalPages(&pagination, totalRows)
+
+		return c.Status(200).JSON(fiber.Map{
+			"data":       users,
+			"pagination": pagination,
+		})
 	})
 
 	// POST v2: user added to DB
@@ -53,7 +85,7 @@ func UsersRouter(app *fiber.App, db *gorm.DB) {
 
 		validationErrors := PostValidate(payload)
 		if validationErrors != nil {
-			return c.JSON(validationErrors)
+			return validation.FailedValidationResponse(c, validationErrors)
 		}
 
 		birthDate, _ := time.Parse(time.RFC3339, payload.BirthDate)
