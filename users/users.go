@@ -2,6 +2,7 @@ package users
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"time"
 
@@ -26,23 +27,25 @@ func UsersRouter(app *fiber.App, db *gorm.DB) {
 	users := app.Group("/users")
 
 	users.Get("/:id", func(c *fiber.Ctx) error {
-		usersSlice := GetUsersSlice()
-		user, err := Find(usersSlice, func(user models.User, idx int) bool {
-			return user.Id == c.Params("id")
-		})
+		var user models.UserSafe
 
-		if err != nil {
-			return c.SendStatus(404)
+		if err := db.Model(&models.User{}).First(&user, "id = ?", c.Params("id")).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+					"originalError": err.Error(),
+					"code":          1002,
+					"status":        "not_found",
+				})
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"originalError": err.Error(),
+				"code":          1003,
+				"status":        "unhandled_server_error",
+			})
 		}
 
 		return c.JSON(user)
 	})
-
-	// [JSON] GET ALL
-	// users.Get("/", func(c *fiber.Ctx) error {
-	// 	usersSlice := GetUsersSlice()
-	// 	return c.JSON(usersSlice)
-	// })
 
 	// [DB] GET ALL
 	users.Get("/", func(c *fiber.Ctx) error {

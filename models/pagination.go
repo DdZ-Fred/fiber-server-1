@@ -4,4 +4,5 @@ type Pagination struct {
 	Page       int `json:"page"`
 	PerPage    int `json:"perPage"`
 	TotalPages int `json:"totalPages"`
+	Total      int `json:"total"`
 }

@@ -15,10 +15,12 @@ func GeneratePaginationFromRequest(c *fiber.Ctx) models.Pagination {
 		Page:       page,
 		PerPage:    perPage,
 		TotalPages: 1,
+		Total:      1,
 	}
 }
 
 func SetPaginationTotalPages(pagination *models.Pagination, totalRows int64) {
+	pagination.Total = int(totalRows)
 	if int(totalRows)%pagination.PerPage == 0 {
 		pagination.TotalPages = int(totalRows) / pagination.PerPage
 	} else {
